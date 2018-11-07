@@ -71,7 +71,7 @@ elif opt.dataset == 'cifar100':
 assert dataset
 
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=opt.batchSize,
-                                         shuffle=True, num_workers=int(opt.workers))
+                                         shuffle=True, drop_last=True, num_workers=int(opt.workers))
 
 generator = Generator(16, opt.upSampling)
 if opt.generatorWeights != '':
@@ -137,13 +137,13 @@ for epoch in range(2):
         generator.zero_grad()
 
         generator_content_loss = content_criterion(high_res_fake, high_res_real)
-        mean_generator_content_loss += generator_content_loss.data[0]
+        mean_generator_content_loss += generator_content_loss.item()
 
         generator_content_loss.backward()
         optim_generator.step()
 
         ######### Status and display #########
-        sys.stdout.write('\r[%d/%d][%d/%d] Generator_MSE_Loss: %.4f' % (epoch, 2, i, len(dataloader), generator_content_loss.data[0]))
+        sys.stdout.write('\r[%d/%d][%d/%d] Generator_MSE_Loss: %.4f' % (epoch, 2, i, len(dataloader), generator_content_loss.item()))
         # visualizer.show(low_res, high_res_real.cpu().data, high_res_fake.cpu().data)
 
     sys.stdout.write('\r[%d/%d][%d/%d] Generator_MSE_Loss: %.4f\n' % (epoch, 2, i, len(dataloader), mean_generator_content_loss/len(dataloader)))
@@ -189,7 +189,7 @@ for epoch in range(opt.nEpochs):
 
         discriminator_loss = adversarial_criterion(discriminator(high_res_real), target_real) + \
                              adversarial_criterion(discriminator(Variable(high_res_fake.data)), target_fake)
-        mean_discriminator_loss += discriminator_loss.data[0]
+        mean_discriminator_loss += discriminator_loss.item()
 
         discriminator_loss.backward()
         optim_discriminator.step()
@@ -201,19 +201,19 @@ for epoch in range(opt.nEpochs):
         fake_features = feature_extractor(high_res_fake)
 
         generator_content_loss = content_criterion(high_res_fake, high_res_real) + 0.006*content_criterion(fake_features, real_features)
-        mean_generator_content_loss += generator_content_loss.data[0]
+        mean_generator_content_loss += generator_content_loss.item()
         generator_adversarial_loss = adversarial_criterion(discriminator(high_res_fake), ones_const)
-        mean_generator_adversarial_loss += generator_adversarial_loss.data[0]
+        mean_generator_adversarial_loss += generator_adversarial_loss.item()
 
         generator_total_loss = generator_content_loss + 1e-3*generator_adversarial_loss
-        mean_generator_total_loss += generator_total_loss.data[0]
+        mean_generator_total_loss += generator_total_loss.item()
 
         generator_total_loss.backward()
         optim_generator.step()
 
         ######### Status and display #########
         sys.stdout.write('\r[%d/%d][%d/%d] Discriminator_Loss: %.4f Generator_Loss (Content/Advers/Total): %.4f/%.4f/%.4f' % (epoch, opt.nEpochs, i, len(dataloader),
-        discriminator_loss.data[0], generator_content_loss.data[0], generator_adversarial_loss.data[0], generator_total_loss.data[0]))
+        discriminator_loss.item(), generator_content_loss.item(), generator_adversarial_loss.item(), generator_total_loss.item()))
         # visualizer.show(low_res, high_res_real.cpu().data, high_res_fake.cpu().data)
 
     sys.stdout.write('\r[%d/%d][%d/%d] Discriminator_Loss: %.4f Generator_Loss (Content/Advers/Total): %.4f/%.4f/%.4f\n' % (epoch, opt.nEpochs, i, len(dataloader),

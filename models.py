@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 def swish(x):
-    return x * F.sigmoid(x)
+    return x * torch.sigmoid(x)
 
 class FeatureExtractor(nn.Module):
     def __init__(self, cnn, feature_layer=11):
@@ -113,4 +113,4 @@ class Discriminator(nn.Module):
         x = swish(self.bn8(self.conv8(x)))
 
         x = self.conv9(x)
-        return F.sigmoid(F.avg_pool2d(x, x.size()[2:])).view(x.size()[0], -1)
+        return torch.sigmoid(F.avg_pool2d(x, x.size()[2:])).view(x.size()[0], -1)
