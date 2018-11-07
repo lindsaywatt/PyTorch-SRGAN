@@ -1,8 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 
 import argparse
 import os
 import sys
+import datetime
 
 import torch
 import torch.optim as optim
@@ -14,10 +15,11 @@ import torchvision
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 
-from tensorboard_logger import configure, log_value
+# from tensorboard_logger import configure, log_value
+from tensorboardX import SummaryWriter
 
 from models import Generator, Discriminator, FeatureExtractor
-from utils import Visualizer
+# from utils import Visualizer
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', type=str, default='cifar100', help='cifar10 | cifar100 | folder')
@@ -74,16 +76,16 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=opt.batchSize,
 generator = Generator(16, opt.upSampling)
 if opt.generatorWeights != '':
     generator.load_state_dict(torch.load(opt.generatorWeights))
-print generator
+print(generator)
 
 discriminator = Discriminator()
 if opt.discriminatorWeights != '':
     discriminator.load_state_dict(torch.load(opt.discriminatorWeights))
-print discriminator
+print(discriminator)
 
 # For the content loss
 feature_extractor = FeatureExtractor(torchvision.models.vgg19(pretrained=True))
-print feature_extractor
+print(feature_extractor)
 content_criterion = nn.MSELoss()
 adversarial_criterion = nn.BCELoss()
 
@@ -101,13 +103,16 @@ if opt.cuda:
 optim_generator = optim.Adam(generator.parameters(), lr=opt.generatorLR)
 optim_discriminator = optim.Adam(discriminator.parameters(), lr=opt.discriminatorLR)
 
-configure('logs/' + opt.dataset + '-' + str(opt.batchSize) + '-' + str(opt.generatorLR) + '-' + str(opt.discriminatorLR), flush_secs=5)
-visualizer = Visualizer(image_size=opt.imageSize*opt.upSampling)
+# configure('logs/' + opt.dataset + '-' + str(opt.batchSize) + '-' + str(opt.generatorLR) + '-' + str(opt.discriminatorLR), flush_secs=5)
+
+writer = SummaryWriter('./tb-logs/' + 'srgan_' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))
+
+# visualizer = Visualizer(image_size=opt.imageSize*opt.upSampling)
 
 low_res = torch.FloatTensor(opt.batchSize, 3, opt.imageSize, opt.imageSize)
 
 # Pre-train generator using raw MSE loss
-print 'Generator pre-training'
+print('Generator pre-training')
 for epoch in range(2):
     mean_generator_content_loss = 0.0
 
@@ -139,10 +144,10 @@ for epoch in range(2):
 
         ######### Status and display #########
         sys.stdout.write('\r[%d/%d][%d/%d] Generator_MSE_Loss: %.4f' % (epoch, 2, i, len(dataloader), generator_content_loss.data[0]))
-        visualizer.show(low_res, high_res_real.cpu().data, high_res_fake.cpu().data)
+        # visualizer.show(low_res, high_res_real.cpu().data, high_res_fake.cpu().data)
 
     sys.stdout.write('\r[%d/%d][%d/%d] Generator_MSE_Loss: %.4f\n' % (epoch, 2, i, len(dataloader), mean_generator_content_loss/len(dataloader)))
-    log_value('generator_mse_loss', mean_generator_content_loss/len(dataloader), epoch)
+    writer.add_scalar('generator_mse_loss', mean_generator_content_loss/len(dataloader), epoch)
 
 # Do checkpointing
 torch.save(generator.state_dict(), '%s/generator_pretrain.pth' % opt.out)
@@ -151,7 +156,7 @@ torch.save(generator.state_dict(), '%s/generator_pretrain.pth' % opt.out)
 optim_generator = optim.Adam(generator.parameters(), lr=opt.generatorLR*0.1)
 optim_discriminator = optim.Adam(discriminator.parameters(), lr=opt.discriminatorLR*0.1)
 
-print 'SRGAN training'
+print('SRGAN training')
 for epoch in range(opt.nEpochs):
     mean_generator_content_loss = 0.0
     mean_generator_adversarial_loss = 0.0
@@ -178,14 +183,14 @@ for epoch in range(opt.nEpochs):
             high_res_fake = generator(Variable(low_res))
             target_real = Variable(torch.rand(opt.batchSize,1)*0.5 + 0.7)
             target_fake = Variable(torch.rand(opt.batchSize,1)*0.3)
-        
+
         ######### Train discriminator #########
         discriminator.zero_grad()
 
         discriminator_loss = adversarial_criterion(discriminator(high_res_real), target_real) + \
                              adversarial_criterion(discriminator(Variable(high_res_fake.data)), target_fake)
         mean_discriminator_loss += discriminator_loss.data[0]
-        
+
         discriminator_loss.backward()
         optim_discriminator.step()
 
@@ -202,23 +207,23 @@ for epoch in range(opt.nEpochs):
 
         generator_total_loss = generator_content_loss + 1e-3*generator_adversarial_loss
         mean_generator_total_loss += generator_total_loss.data[0]
-        
+
         generator_total_loss.backward()
-        optim_generator.step()   
-        
+        optim_generator.step()
+
         ######### Status and display #########
         sys.stdout.write('\r[%d/%d][%d/%d] Discriminator_Loss: %.4f Generator_Loss (Content/Advers/Total): %.4f/%.4f/%.4f' % (epoch, opt.nEpochs, i, len(dataloader),
         discriminator_loss.data[0], generator_content_loss.data[0], generator_adversarial_loss.data[0], generator_total_loss.data[0]))
-        visualizer.show(low_res, high_res_real.cpu().data, high_res_fake.cpu().data)
+        # visualizer.show(low_res, high_res_real.cpu().data, high_res_fake.cpu().data)
 
     sys.stdout.write('\r[%d/%d][%d/%d] Discriminator_Loss: %.4f Generator_Loss (Content/Advers/Total): %.4f/%.4f/%.4f\n' % (epoch, opt.nEpochs, i, len(dataloader),
-    mean_discriminator_loss/len(dataloader), mean_generator_content_loss/len(dataloader), 
+    mean_discriminator_loss/len(dataloader), mean_generator_content_loss/len(dataloader),
     mean_generator_adversarial_loss/len(dataloader), mean_generator_total_loss/len(dataloader)))
 
-    log_value('generator_content_loss', mean_generator_content_loss/len(dataloader), epoch)
-    log_value('generator_adversarial_loss', mean_generator_adversarial_loss/len(dataloader), epoch)
-    log_value('generator_total_loss', mean_generator_total_loss/len(dataloader), epoch)
-    log_value('discriminator_loss', mean_discriminator_loss/len(dataloader), epoch)
+    writer.add_scalar('generator_content_loss', mean_generator_content_loss/len(dataloader), epoch)
+    writer.add_scalar('generator_adversarial_loss', mean_generator_adversarial_loss/len(dataloader), epoch)
+    writer.add_scalar('generator_total_loss', mean_generator_total_loss/len(dataloader), epoch)
+    writer.add_scalar('discriminator_loss', mean_discriminator_loss/len(dataloader), epoch)
 
     # Do checkpointing
     torch.save(generator.state_dict(), '%s/generator_final.pth' % opt.out)

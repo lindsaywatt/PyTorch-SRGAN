@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 
 import argparse
 import sys
@@ -126,7 +126,7 @@ for i, data in enumerate(dataloader):
     else:
         high_res_real = Variable(high_res_real)
         high_res_fake = generator(Variable(low_res))
-    
+
     ######### Test discriminator #########
 
     discriminator_loss = adversarial_criterion(discriminator(high_res_real), target_real) + \
@@ -156,5 +156,5 @@ for i, data in enumerate(dataloader):
         save_image(unnormalize(low_res[j]), 'output/low_res/' + str(i*opt.batchSize + j) + '.png')
 
 sys.stdout.write('\r[%d/%d] Discriminator_Loss: %.4f Generator_Loss (Content/Advers/Total): %.4f/%.4f/%.4f\n' % (i, len(dataloader),
-mean_discriminator_loss/len(dataloader), mean_generator_content_loss/len(dataloader), 
+mean_discriminator_loss/len(dataloader), mean_generator_content_loss/len(dataloader),
 mean_generator_adversarial_loss/len(dataloader), mean_generator_total_loss/len(dataloader)))
