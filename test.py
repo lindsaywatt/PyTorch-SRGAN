@@ -16,10 +16,10 @@ from torchvision.utils import save_image
 from models import Generator, Discriminator, FeatureExtractor
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--dataset', type=str, default='cifar100', help='cifar10 | cifar100 | folder')
+parser.add_argument('--dataset', type=str, default='cifar10', help='cifar10 | cifar100 | folder')
 parser.add_argument('--dataroot', type=str, default='./data', help='path to dataset')
-parser.add_argument('--workers', type=int, default=2, help='number of data loading workers')
-parser.add_argument('--batchSize', type=int, default=16, help='input batch size')
+parser.add_argument('--workers', type=int, default=8, help='number of data loading workers')
+parser.add_argument('--batchSize', type=int, default=256, help='input batch size')
 parser.add_argument('--imageSize', type=int, default=15, help='the low resolution image size')
 parser.add_argument('--upSampling', type=int, default=2, help='low to high resolution scaling factor')
 parser.add_argument('--cuda', action='store_true', help='enables cuda')
